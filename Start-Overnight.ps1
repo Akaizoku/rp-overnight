@@ -10,6 +10,12 @@
   .PARAMETER ProcessingDate
   The optional processing date parameter corresponds to the reporting date. The default value is d-1.
 
+  .PARAMETER LotType
+  The optional lot type parameter corresponds to the number of the data foundation lot. The default value is 1.
+
+  .PARAMETER Unattended
+  The unattended switch define if the script should run in silent mode without any user interaction.
+
   .INPUTS
   System.String. You can pipe the date to Start-Overnight.
 
@@ -20,7 +26,7 @@
   File name:      Start-Overnight.ps1
   Author:         Florian CARRIER
   Creation date:  17/02/2020
-  Last modified:  17/02/2020
+  Last modified:  11/03/2020
   Dependencies:   - PowerShell Tool Kit (PSTK)
                   - RiskPro PowerShell Module (PSRP)
                   - SQL Server PowerShell Module (SQLServer)
@@ -62,6 +68,16 @@ Param (
   [System.String]
   $ProcessingDate = (Get-Date -Date (Get-Date).AddDays(-1) -Format "yyyyMMdd"),
   [Parameter (
+    Position    = 2,
+    Mandatory   = $false,
+    HelpMessage = "Data foundation lot type",
+    ValueFromPipeline               = $true,
+    ValueFromPipelineByPropertyName = $true
+  )]
+  [ValidateNotNullOrEmpty ()]
+  [System.Int32]
+  $LotType = 1,
+  [Parameter (
     HelpMessage = "Run script in unattended mode"
   )]
   [Switch]
@@ -96,18 +112,16 @@ Begin {
   # ----------------------------------------------------------------------------
   # Modules
   # ----------------------------------------------------------------------------
-  $Modules = @("PSTK", "PSRP", "SQLServer")
+  $Modules = @("PSTK", "PSRP")
   foreach ($Module in $Modules) {
-    # Workaround for issue RPD-2
-    $Force = $Module -ne "SQLServer"
     try {
       # Check if module is installed
-      Import-Module -Name "$Module" -Force:$Force -ErrorAction "Stop"
+      Import-Module -Name "$Module" -Force -ErrorAction "Stop"
       Write-Log -Type "CHECK" -Object "The $Module module was successfully loaded."
     } catch {
       # If module is not installed then check if package is available locally
       try {
-        Import-Module -Name (Join-Path -Path $LibDirectory -ChildPath $Module) -ErrorAction "Stop" -Force:$Force
+        Import-Module -Name (Join-Path -Path $LibDirectory -ChildPath $Module) -ErrorAction "Stop" -Force
         Write-Log -Type "CHECK" -Object "The $Module module was successfully loaded from the library directory."
       } catch {
         Throw "The $Module library could not be loaded. Make sure it has been made available on the machine or manually put it in the ""$LibDirectory"" directory"
@@ -206,9 +220,59 @@ Begin {
   # Database properties
   $Properties.Database = Import-Properties -Path (Join-Path -Path $ConfDirectory -ChildPath "database.ini") -Section
 
+  # Database drivers
+  $LoadSQLServer  = $false
+  $LoadOracle     = $false
+  if ($Properties.UseLogDatabase -eq $true) {
+    switch ($Properties.Database.Log.DatabaseType) {
+      "Oracle"    { $LoadOracle     = $true }
+      "SQLServer" { $LoadSQLServer  = $true }
+      default     { Write-Log -Type "ERROR" -Object "Unsupported log database type ""$($Properties.Database.Log.DatabaseType)"""}
+    }
+  }
+  if ($Properties.UseResultDatabase -eq $true) {
+    switch ($Properties.Database.Result.DatabaseType) {
+      "Oracle"    { $LoadOracle     = $true }
+      "SQLServer" { $LoadSQLServer  = $true }
+      default     { Write-Log -Type "ERROR" -Object "Unsupported result database type ""$($Properties.Database.Result.DatabaseType)"""}
+    }
+  }
+  if ($LoadOracle -eq $true) {
+    # Load Oracle Managed Data Access assembly
+    if ($Properties.OracleManagedDataAccess -And (Test-Path -Path $Properties.OracleManagedDataAccess)) {
+      Add-Type -Path $Properties.OracleManagedDataAccess
+    } else {
+      Write-Log -Type "ERROR" -Object "Oracle.ManagedDataAccess assembly not found" -ExitCode 1
+    }
+  }
+  if ($LoadSQLServer -eq $true) {
+    # Load modules
+    $Modules = @("SQLServer")
+    foreach ($Module in $Modules) {
+      # Workaround for issue RPD-2
+      $Force = $Module -ne "SQLServer"
+      try {
+        # Check if module is installed
+        Import-Module -Name "$Module" -Force:$Force -ErrorAction "Stop"
+        Write-Log -Type "CHECK" -Object "The $Module module was successfully loaded."
+      } catch {
+        # If module is not installed then check if package is available locally
+        try {
+          Import-Module -Name (Join-Path -Path $LibDirectory -ChildPath $Module) -ErrorAction "Stop" -Force:$Force
+          Write-Log -Type "CHECK" -Object "The $Module module was successfully loaded from the library directory."
+        } catch {
+          Throw "The $Module library could not be loaded. Make sure it has been made available on the machine or manually put it in the ""$LibDirectory"" directory"
+        }
+      }
+    }
+  }
+
   # Processing date
   $Properties.ProcessingDate = $ProcessingDate
   $Properties.AnalysisDate   = [Datetime]::ParseExact($ProcessingDate, "yyyyMMdd", $null).ToString("d/M/yyyy")
+
+  # Lot type
+  $Properties.LotType = $LotType
 
   # Define model name
   $Properties.ProductionModelName        = [System.String]::Concat($Properties.ProductionModelPrefix, "_", $Properties.ProcessingDate)
@@ -242,6 +306,7 @@ Process {
   Test-Prerequisites          -Properties $Properties
   Publish-MasterModel         -Properties $Properties
   Import-MarketData           -Properties $Properties
+  Publish-MasterModel         -Properties $Properties
   Initialize-ProductionModel  -Properties $Properties
   Import-Contracts            -Properties $Properties
   Start-Solves                -Properties $Properties

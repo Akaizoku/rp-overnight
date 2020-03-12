@@ -57,14 +57,14 @@ function Test-Models {
     # Check reference model
     Write-Log -Type "INFO" -Object "Checking reference model"
     $TestReferenceModel = Test-Model -JavaPath $Properties.JavaPath -RiskProBatchClient $Properties.RiskProBatchClientPath -ServerURI $Properties.ServerURI -Credentials $Properties.Credentials.RiskPro -JavaOptions $Properties.JavaOptions -ModelName $Properties.ReferenceModelName
-    if ((Test-RiskProBatchClientOutcome -Log $TestReferenceModel) -eq $false) {
+    if ($TestReferenceModel -eq $false) {
       Write-Log -Type "ERROR" -Object "Reference model ""$($Properties.ReferenceModelName)"" does not exist"
       $ErrorCount++
     }
     # Check if historisation model exists
     Write-Log -Type "INFO" -Object "Checking historisation model"
     $TestHistorisationModel = Test-Model -JavaPath $Properties.JavaPath -RiskProBatchClient $Properties.RiskProBatchClientPath -ServerURI $Properties.ServerURI -Credentials $Properties.Credentials.RiskPro -JavaOptions $Properties.JavaOptions -ModelName $Properties.HistorisationModelName
-    if ((Test-RiskProBatchClientOutcome -Log $TestHistorisationModel) -eq $false) {
+    if ($TestHistorisationModel -eq $false) {
       Write-Log -Type "ERROR" -Object "Historisation model ""$($Properties.HistorisationModelName)"" does not exist"
       $ErrorCount++
     }

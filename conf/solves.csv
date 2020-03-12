@@ -1,16 +1,4 @@
-Solve name, Solve kind, Analysis date convention, Data groups, Data filters, Separator
-Regulatory EVE, Static, PM, Acumen,,;
-Fixing Gap, Static, PM, Normal,,;
-Cash Flow Calculation, Static, PM, Normal,,;
-DoE, Static, PM, Acumen,,;
-Fixing Gap Portfolio Level, Static, PM, Normal,,;
-NII, Dynamic, PM, Normal,,;
-Liquidity Projection, Dynamic, PM, Normal,,;
-Survival Horizon, Dynamic, PM, Normal,,;
-Dynamic LCR, Dynamic, PM, Normal;LCR,,;
-Dynamic NSFR, Dynamic, PM, Normal;NSFR,,;
-Dynamic LR, Dynamic, PM, Normal;LR,,;
-Historization, Historisation, PM, Normal,,;
-Daily rollup, Rollup, PM,,,
-Monthly rollup, Rollup, PM,,,
-Daily purge, CleanRollup,,,,
+Solve name, Solve kind, Analysis date convention, Data filters, Separator
+LIQ Static Analysis, Static, PM,,;
+Daily rollup, Rollup, PM,,;
+Daily purge, CleanRollup,,;

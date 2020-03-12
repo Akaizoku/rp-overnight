@@ -10,7 +10,7 @@ function Start-Solves {
     File name:      Start-Solves.ps1
     Author:         Florian CARRIER
     Creation date:  18/02/2020
-    Last modified:  21/02/2020
+    Last modified:  12/03/2020
   #>
   [CmdletBinding (
     SupportsShouldProcess = $true
@@ -31,11 +31,13 @@ function Start-Solves {
     # List solves
     $StaticSolves   = $Properties.Solves | Where-Object -Property "Solve kind" -CEQ -Value "Static"   | Select-Object -ExpandProperty "Solve name"
     $DynamicSolves  = $Properties.Solves | Where-Object -Property "Solve kind" -CEQ -Value "Dynamic"  | Select-Object -ExpandProperty "Solve name"
+    # Define data group
+    $DataGroup      = [System.String]::Concat($Properties.LotType, "-", $Properties.ProcessingDate)
   }
   Process {
     # Loop through static solves
     Write-Log -Type "INFO" -Object "Running static solves"
-    if ($StaticSolves.Count -ge 1) {
+    if ($StaticSolves -ge 1) {
       foreach ($StaticSolve in $StaticSolves) {
         Write-Log -Type "INFO" -Object "Running static analysis ""$StaticSolve"""
         # Define solve properties
@@ -43,7 +45,7 @@ function Start-Solves {
         $SolveName        = [System.String]::Concat($StaticSolve, "_", (Get-Date -Format "yyyy-MM-dd_HHmmss"))
         $AnalysisDate     = [System.String]::Concat($Properties.AnalysisDate, " ", $SolveProperties.("Analysis date convention"))
         # Run static solve
-        $RunStaticSolve = Start-Solve -JavaPath $Properties.JavaPath -RiskProBatchClient $Properties.RiskProBatchClientPath -ServerURI $Properties.ServerURI -Credentials $Properties.Credentials.RiskPro -JavaOptions $Properties.JavaOptions -ModelName $Properties.ProductionModelName -ResultSelection $StaticSolve -AccountStructure $Properties.AccountStructureName -SolveName $SolveName -AnalysisDate $AnalysisDate -DataGroups $SolveProperties.("Data groups") -DataFilters $SolveProperties.("Data filters") -Separator $SolveProperties.("Separator") -Kind "Static" -SynchronousMode
+        $RunStaticSolve = Start-Solve -JavaPath $Properties.JavaPath -RiskProBatchClient $Properties.RiskProBatchClientPath -ServerURI $Properties.ServerURI -Credentials $Properties.Credentials.RiskPro -JavaOptions $Properties.JavaOptions -ModelName $Properties.ProductionModelName -ResultSelection $StaticSolve -AccountStructure $Properties.AccountStructureName -SolveName $SolveName -AnalysisDate $AnalysisDate -DataGroups $DataGroup -DataFilters $SolveProperties.("Data filters") -Separator $SolveProperties.("Separator") -Kind "Static" -SynchronousMode
         Assert-RiskProBatchClientOutcome -Log $RunStaticSolve -Object """$StaticSolve"" static analysis" -Verb "run" -IrregularForm "run"
         # Save results
         if ($Properties.UseResultDatabase -eq $true) {
@@ -64,7 +66,7 @@ function Start-Solves {
         $SolveName        = [System.String]::Concat($DynamicSolve, "_", (Get-Date -Format "yyyy-MM-dd_HHmmss"))
         $AnalysisDate     = [System.String]::Concat($Properties.AnalysisDate, " ", $SolveProperties.("Analysis date convention"))
         # Run dynamic solve
-        $RunDynamicSolve = Start-Solve -JavaPath $Properties.JavaPath -RiskProBatchClient $Properties.RiskProBatchClientPath -ServerURI $Properties.ServerURI -Credentials $Properties.Credentials.RiskPro -JavaOptions $Properties.JavaOptions -ModelName $Properties.ProductionModelName -ResultSelection $DynamicSolve -AccountStructure $Properties.AccountStructureName -SolveName $SolveName -AnalysisDate $AnalysisDate -DataGroups $SolveProperties.("Data groups") -DataFilters $SolveProperties.("Data filters") -Separator $SolveProperties.("Separator") -Kind "Dynamic" -SynchronousMode
+        $RunDynamicSolve = Start-Solve -JavaPath $Properties.JavaPath -RiskProBatchClient $Properties.RiskProBatchClientPath -ServerURI $Properties.ServerURI -Credentials $Properties.Credentials.RiskPro -JavaOptions $Properties.JavaOptions -ModelName $Properties.ProductionModelName -ResultSelection $DynamicSolve -AccountStructure $Properties.AccountStructureName -SolveName $SolveName -AnalysisDate $AnalysisDate -DataGroups $DataGroup -DataFilters $SolveProperties.("Data filters") -Separator $SolveProperties.("Separator") -Kind "Dynamic" -SynchronousMode
         Assert-RiskProBatchClientOutcome -Log $RunDynamicSolve -Object """$DynamicSolve"" dynamic analysis" -Verb "run" -IrregularForm "run"
         # Save results
         if ($Properties.UseResultDatabase -eq $true) {
